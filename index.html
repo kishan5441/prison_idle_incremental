@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f0d0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Prison Idle Tycoon</title>
+<style>
+:root{
+  --bg:#0f0d0b; --panel:#1a1715; --panel2:#241f1c; --line:#3a322c;
+  --amber:#f59e0b; --text:#f0ece8; --dim:#9c948c;
+  --good:#34d399; --warn:#fbbf24; --bad:#f87171;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  user-select:none;-webkit-user-select:none;
+  overscroll-behavior:none;touch-action:manipulation;
+}
+#app{height:100vh;height:100dvh;max-width:520px;margin:0 auto;display:flex;flex-direction:column}
+
+/* ---------- HUD ---------- */
+#hud{padding:8px 9px 7px;background:linear-gradient(180deg,#1c1815,#131110);
+     border-bottom:1px solid var(--line);flex:0 0 auto}
+.hud-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.hstat{background:#211d1a;border:1px solid var(--line);border-radius:10px;
+       padding:5px 6px;text-align:center;min-width:0}
+.hlabel{font-size:8px;letter-spacing:.12em;color:var(--dim);font-weight:800}
+.hval{font-size:15px;font-weight:800;color:var(--amber);white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.hsub{font-size:9.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.hbar{position:relative;height:17px;background:#211d1a;border:1px solid var(--line);
+      border-radius:9px;overflow:hidden}
+.hfill{position:absolute;left:0;top:0;bottom:0;width:0;transition:width .35s ease}
+.hfill.sat{background:linear-gradient(90deg,#065f46,#34d399)}
+.hfill.dgr{background:linear-gradient(90deg,#7f1d1d,#f87171)}
+.hbar span{position:relative;z-index:1;display:block;text-align:center;
+           font-size:9.5px;line-height:15px;font-weight:800;text-shadow:0 1px 3px #000}
+
+/* ---------- VIEW ---------- */
+#view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      padding:9px 9px 20px;scrollbar-width:none}
+#view::-webkit-scrollbar{display:none}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+      padding:10px;margin-bottom:8px}
+.card h3{font-size:10px;letter-spacing:.1em;color:var(--dim);font-weight:800;
+         margin-bottom:9px;text-transform:uppercase}
+
+.row{display:flex;align-items:center;gap:9px;background:var(--panel2);
+     border:1px solid var(--line);border-radius:11px;padding:8px 9px;margin-bottom:6px}
+.row .ic{font-size:19px;width:25px;text-align:center;flex:0 0 auto}
+.row .mid{flex:1;min-width:0}
+.row .nm{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ds{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+.btn{flex:0 0 auto;background:linear-gradient(180deg,#f59e0b,#d97706);color:#1a1206;
+     border:0;border-radius:9px;padding:8px 10px;font-size:11px;font-weight:800;
+     font-family:inherit;min-width:78px;text-align:center;line-height:1.3;
+     transition:transform .07s}
+.btn:active{transform:scale(.94)}
+.btn.off{background:#2a2420;color:#665e57;box-shadow:none}
+.btn.ghost{background:#2a2420;color:var(--text);border:1px solid var(--line)}
+.btn.bad{background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff}
+.btn.done{background:#1f3a2c;color:#34d399}
+
+/* needs */
+.need{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.need .ni{font-size:15px;width:19px;text-align:center;flex:0 0 auto}
+.need .nb{flex:1;min-width:0}
+.need .nt{display:flex;justify-content:space-between;font-size:10.5px;
+          font-weight:700;margin-bottom:3px}
+.track{height:8px;background:#2a2420;border-radius:5px;overflow:hidden}
+.fill{height:100%;border-radius:5px;transition:width .35s ease}
+
+/* economy rows */
+.er{display:flex;justify-content:space-between;font-size:11px;padding:3.5px 0;
+    color:var(--dim)}
+.er b{font-weight:800}
+.er.total{border-top:1px solid var(--line);margin-top:5px;padding-top:7px;
+          color:var(--text);font-size:12.5px}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+
+/* log */
+.log{font-size:10.5px;line-height:1.45;max-height:190px;overflow-y:auto}
+.log div{padding:4px 0;border-bottom:1px solid #221e1b;color:var(--dim)}
+.log div:last-child{border-bottom:0}
+.log .good{color:var(--good)} .log .bad{color:var(--bad)}
+.log .warn{color:var(--warn)} .log .dim{color:#7d766f}
+
+/* tabs */
+#tabs{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);
+      background:#131110;border-top:1px solid var(--line);
+      padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{background:none;border:0;color:var(--dim);padding:8px 2px 9px;
+             font-size:9px;font-weight:800;display:flex;flex-direction:column;
+             align-items:center;gap:3px;font-family:inherit;letter-spacing:.02em}
+#tabs button .ti{font-size:17px;line-height:1;transition:transform .15s}
+#tabs button.on{color:var(--amber)}
+#tabs button.on .ti{transform:translateY(-1px) scale(1.12);
+                    filter:drop-shadow(0 0 7px rgba(245,158,11,.65))}
+
+.empty{text-align:center;color:var(--dim);font-size:11px;padding:22px 10px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-grid">
+      <div class="hstat">
+        <div class="hlabel">FUNDS</div>
+        <div class="hval" id="hud-money">$0</div>
+        <div class="hsub" id="hud-rate">+$0/day</div>
+      </div>
+      <div class="hstat">
+        <div class="hlabel">DAY</div>
+        <div class="hval" id="hud-day">1</div>
+        <div class="hsub" id="hud-clock">06:00</div>
+      </div>
+      <div class="hstat">
+        <div class="hlabel">INMATES</div>
+        <div class="hval" id="hud-pop">0/0</div>
+        <div class="hsub" id="hud-rep">★ 50</div>
+      </div>
+    </div>
+    <div class="hud-bars">
+      <div class="hbar"><div class="hfill sat" id="bar-sat"></div><span id="txt-sat">Order 0%</span></div>
+      <div class="hbar"><div class="hfill dgr" id="bar-dgr"></div><span id="txt-dgr">Danger 0%</span></div>
+    </div>
+  </header>
+
+  <main id="view"></main>
+  <nav id="tabs"></nav>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => v < a ? a : (v > b ? b : v);
+const rnd = (a,b) => a + Math.random()*(b-a);
+
+function fmt(n){
+  const neg = n < 0;
+  n = Math.abs(n);
+  let out;
+  if(n < 1000) out = String(Math.floor(n));
+  else {
+    const u = ['','K','M','B','T','Qa','Qi','Sx'];
+    let i = 0;
+    while(n >= 1000 && i < u.length-1){ n /= 1000; i++; }
+    out = n.toFixed(n < 10 ? 2 : n < 100 ? 1 : 0) + u[i];
+  }
+  return (neg ? '-$' : '$') + out;
+}
+const fmtShort = n => fmt(n).replace('$','');
+
+function barColor(pct){
+  if(pct >= 70) return 'linear-gradient(90deg,#065f46,#34d399)';
+  if(pct >= 40) return 'linear-gradient(90deg,#78350f,#fbbf24)';
+  return 'linear-gradient(90deg,#7f1d1d,#f87171)';
+}
+
+/* =========================================================
+   GAME DATA
+   ========================================================= */
+const SAVE_KEY = 'prisonIdle_v1';
+const TICK_MS  = 1000;      // 1 tick = 1 game hour
+const HOURS_PER_DAY = 24;   // → 24 sec per in-game day
+
+const BUILDINGS = [
+  {id:'cell',      name:'Cell Block',    icon:'🛏️', base:600,  growth:1.28, desc:'+4 inmate capacity'},
+  {id:'canteen',   name:'Canteen',       icon:'🍽️', base:900,  growth:1.34, desc:'Feeds 8 inmates'},
+  {id:'shower',    name:'Shower Block',  icon:'🚿', base:750,  growth:1.34, desc:'Hygiene for 8 inmates'},
+  {id:'yard',      name:'Exercise Yard', icon:'🏀', base:1000, growth:1.34, desc:'Recreation for 8 inmates'},
+  {id:'infirmary', name:'Infirmary',     icon:'🏥', base:1600, growth:1.38, desc:'Medical care for 6 inmates'},
+  {id:'guardpost', name:'Guard Post',    icon:'🛡️', base:1300, growth:1.34, desc:'Security for 10 inmates'},
+  {id:'workshop',  name:'Workshop',      icon:'🔧', base:2500, growth:1.42, desc:'5 jobs · $25/day each'},
+  {id:'laundry',   name:'Laundry',       icon:'🧺', base:1800, growth:1.40, desc:'4 jobs · $16/day each'},
+];
+
+const STAFF = [
+  {id:'guard',   name:'Guard',   icon:'💂', wage:140, desc:'+8 security coverage'},
+  {id:'cook',    name:'Cook',    icon:'👨‍🍳', wage:100, desc:'+6 food coverage'},
+  {id:'janitor', name:'Janitor', icon:'🧹', wage:80,  desc:'+6 hygiene coverage'},
+  {id:'doctor',  name:'Doctor',  icon:'👨‍⚕️', wage:180, desc:'+5 medical coverage'},
+  {id:'foreman', name:'Foreman', icon:'👷', wage:150, desc:'+20% prison labour income'},
+];
+
+const UPGRADES = [
+  {id:'food',    name:'Nutrition Program', icon:'🥗', cost:6000,  desc:'+30% food coverage'},
+  {id:'scanner', name:'Metal Detectors',   icon:'📡', cost:9000,  desc:'+30% security coverage'},
+  {id:'trade',   name:'Trade Contracts',   icon:'📦', cost:14000, desc:'+35% prison labour income'},
+  {id:'solar',   name:'Solar Panels',      icon:'☀️', cost:18000, desc:'-35% utility costs'},
+  {id:'cctv',    name:'CCTV Network',      icon:'📹', cost:22000, desc:'Danger rises 40% slower'},
+  {id:'rehab',   name:'Rehab Program',     icon:'📚', cost:30000, desc:'+25% government grant'},
+  {id:'union',   name:'Staff Union Deal',  icon:'🤝', cost:45000, desc:'-20% staff wages'},
+  {id:'maxsec',  name:'Max Security Wing', icon:'🔒', cost:60000, desc:'+50% government grant'},
+];
+
+const TABS = [
+  {id:'prison',  icon:'🏢', label:'Prison'},
+  {id:'build',   icon:'🔨', label:'Build'},
+  {id:'staff',   icon:'👮', label:'Staff'},
+  {id:'upgrade', icon:'⭐', label:'Upgrade'},
+  {id:'stats',   icon:'📊', label:'Stats'},
+];
+
+/* =========================================================
+   STATE
+   ========================================================= */
+function defaultState(){
+  return {
+    money: 4000,
+    day: 1,
+    hour: 6,
+    reputation: 50,
+    satisfaction: 92,
+    danger: 4,
+    population: 6,
+    buildings: {cell:2, canteen:1, shower:1, yard:1, guardpost:1, infirmary:1},
+    staff: {},
+    upgrades: {},
+    totals: {earned:0, spent:0, intake:0, released:0, escapes:0, riots:0, built:0},
+    log: [],
+    tab: 'prison',
+    lastSave: Date.now()
+  };
+}
+let state = defaultState();
+
+/* =========================================================
+   ACCESSORS
+   ========================================================= */
+const bCount = id => state.buildings[id] || 0;
+const sCount = id => state.staff[id] || 0;
+const hasUp  = id => !!state.upgrades[id];
+const totalBuildings = () => Object.values(state.buildings).reduce((a,b)=>a+b,0);
+
+function buildingCost(b){
+  return Math.floor(b.base * Math.pow(b.growth, bCount(b.id)));
+}
+
+/* =========================================================
+   DERIVED / ECONOMY
+   ========================================================= */
+function derived(){
+  const pop = Math.max(1, state.population);
+
+  const needs = [
+    {id:'food',     label:'Food',       icon:'🍽️',
+     cap:(bCount('canteen')*8 + sCount('cook')*6) * (hasUp('food') ? 1.3 : 1)},
+    {id:'hygiene',  label:'Hygiene',    icon:'🚿',
+     cap:(bCount('shower')*8 + sCount('janitor')*6)},
+    {id:'rec',      label:'Recreation', icon:'🏀',
+     cap:(bCount('yard')*8)},
+    {id:'health',   label:'Health',     icon:'🏥',
+     cap:(bCount('infirmary')*6 + sCount('doctor')*5)},
+    {id:'security', label:'Security',   icon:'🛡️',
+     cap:(bCount('guardpost')*10 + sCount('guard')*8) * (hasUp('scanner') ? 1.3 : 1)},
+  ];
+  needs.forEach(n => { n.score = clamp(n.cap / pop * 100, 0, 100); });
+
+  const capacity  = bCount('cell') * 4;
+  const jobSlots  = bCount('workshop')*5 + bCount('laundry')*4;
+  const jobValue  = bCount('workshop')*5*25 + bCount('laundry')*4*16;
+
+  const wages = STAFF.reduce((a,s)=> a + sCount(s.id)*s.wage, 0) * (hasUp('union') ? 0.8 : 1);
+
+  const grantPer = (60 + state.reputation * 0.6)
+                 * (1 + (hasUp('rehab') ? 0.25 : 0) + (hasUp('maxsec') ? 0.5 : 0));
+  const grantIncome = state.population * grantPer;
+
+  const activeJobs = Math.min(jobSlots, Math.floor(state.population * 0.7));
+  const jobIncome  = jobSlots > 0
+    ? (jobValue / jobSlots) * activeJobs
+      * (hasUp('trade') ? 1.35 : 1)
+      * (1 + sCount('foreman') * 0.2)
+    : 0;
+
+  const foodCost = state.population * 9;
+  const utility  = (state.population*3 + totalBuildings()*6) * (hasUp('solar') ? 0.65 : 1);
+
+  const expenses = wages + foodCost + utility;
+  const net = grantIncome + jobIncome - expenses;
+
+  return {needs, capacity, grantIncome, jobIncome, wages, foodCost, utility,
+          expenses, net, jobSlots, activeJobs, grantPer};
+}
+
+/* =========================================================
+   LOG
+   ========================================================= */
+function addLog(msg, cls){
+  state.log.unshift({d: state.day, m: msg, c: cls || ''});
+  if(state.log.length > 40) state.log.length = 40;
+}
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+function buyBuilding(id){
+  const b = BUILDINGS.find(x => x.id === id);
+  if(!b) return;
+  const cost = buildingCost(b);
+  if(state.money < cost) return;
+  state.money -= cost;
+  state.totals.spent += cost;
+  state.totals.built++;
+  state.buildings[id] = bCount(id) + 1;
+  addLog(`${b.icon} Built a ${b.name} for ${fmt(cost)}.`, 'dim');
+  if(navigator.vibrate) navigator.vibrate(12);
+}
+
+function hireStaff(id){
+  const s = STAFF.find(x => x.id === id);
+  if(!s) return;
+  const fee = s.wage * 2;
+  if(state.money < fee) return;
+  state.money -= fee;
+  state.totals.spent += fee;
+  state.staff[id] = sCount(id) + 1;
+  addLog(`🤝 Hired a ${s.name} (signing fee ${fmt(fee)}).`, 'dim');
+  if(navigator.vibrate) navigator.vibrate(12);
+}
+
+function fireStaff(id){
+  const s = STAFF.find(x => x.id === id);
+  if(!s || sCount(id) <= 0) return;
+  state.staff[id] = sCount(id) - 1;
+  if(state.staff[id] === 0) delete state.staff[id];
+  addLog(`👋 A ${s.name} was laid off.`, 'warn');
+}
+
+function buyUpgrade(id){
+  const u = UPGRADES.find(x => x.id === id);
+  if(!u || hasUp(id)) return;
+  if(state.money < u.cost) return;
+  state.money -= u.cost;
+  state.totals.spent += u.cost;
+  state.upgrades[id] = true;
+  addLog(`${u.icon} Purchased ${u.name} for ${fmt(u.cost)}.`, 'good');
+  if(navigator.vibrate) navigator.vibrate([15,40,15]);
+}
+
+/* =========================================================
+   SIMULATION
+   ========================================================= */
+function tick(){
+  state.hour++;
+  if(state.hour >= HOURS_PER_DAY){
+    state.hour = 0;
+    endOfDay();
+  }
+
+  const d = derived();
+
+  /* satisfaction smoothly chases coverage target */
+  const target = d.needs.reduce((a,n)=> a + n.score, 0) / d.needs.length;
+  state.satisfaction += (target - state.satisfaction) * 0.08;
+
+  /* danger */
+  if(state.satisfaction < 55){
+    state.danger += (55 - state.satisfaction) * 0.01 * (hasUp('cctv') ? 0.6 : 1);
+  } else {
+    state.danger -= 0.25;
+  }
+  state.danger = clamp(state.danger, 0, 100);
+
+  /* reputation drifts toward satisfaction */
+  state.reputation = clamp(
+    state.reputation + (state.satisfaction - state.reputation) * 0.012, 0, 100);
+
+  /* money accrues hourly */
+  const hourly = d.net / 24;
+  state.money += hourly;
+  if(hourly > 0) state.totals.earned += hourly;
+  else state.totals.spent += -hourly;
+
+  /* riot trigger */
+  if(state.danger >= 100) riot();
+}
+
+function endOfDay(){
+  state.day++;
+
+  /* --- parole releases --- */
+  const rel = Math.min(state.population,
+              Math.round(state.population * 0.03 * rnd(0.5, 1.5)));
+  if(rel > 0){
+    state.population -= rel;
+    state.totals.released += rel;
+    addLog(`🔓 ${rel} inmate${rel>1?'s':''} released on parole.`, 'dim');
+  }
+
+  /* --- new intake --- */
+  const cap  = bCount('cell') * 4;
+  const free = cap - state.population;
+  if(free > 0 && state.reputation > 5){
+    const want   = Math.max(1, Math.round(state.reputation / 16));
+    const arrive = Math.min(free, Math.round(want * rnd(0.6, 1.4)));
+    if(arrive > 0){
+      state.population += arrive;
+      state.totals.intake += arrive;
+      addLog(`🚚 ${arrive} new inmate${arrive>1?'s':''} transferred in.`, 'good');
+    }
+  } else if(free <= 0){
+    addLog(`⚠️ Prison at full capacity — intake halted.`, 'warn');
+  }
+
+  /* --- escape attempt --- */
+  if(state.danger > 45 && Math.random() < (state.danger - 45) / 380){
+    const esc = Math.max(1, Math.round(state.population * 0.05));
+    state.population = Math.max(0, state.population - esc);
+    state.reputation = clamp(state.reputation - 6, 0, 100);
+    state.totals.escapes += esc;
+    addLog(`🏃 ${esc} inmate${esc>1?'s':''} escaped! Reputation −6.`, 'bad');
+  }
+
+  /* --- random events --- */
+  const r = Math.random();
+  if(r < 0.07 && state.population > 0){
+    const gain = Math.round(state.population * 25);
+    state.money += gain;
+    state.totals.earned += gain;
+    addLog(`📋 Government inspection passed. Bonus ${fmt(gain)}.`, 'good');
+  } else if(r < 0.12 && state.population > 2){
+    const loss = Math.round(state.population * 18);
+    state.money -= loss;
+    state.totals.spent += loss;
+    addLog(`⚕️ Disease outbreak in the block. Medical costs ${fmt(loss)}.`, 'warn');
+  } else if(r < 0.16 && state.population > 3){
+    const esc2 = 1;
+    state.population -= esc2;
+    state.totals.escapes += esc2;
+    addLog(`🚨 Contraband found in a cell. ${esc2} inmate isolated.`, 'warn');
+  }
+}
+
+function riot(){
+  const loss = Math.floor(state.money * 0.25);
+  state.money -= loss;
+  state.totals.spent += loss;
+
+  const esc = Math.round(state.population * 0.1);
+  state.population = Math.max(0, state.population - esc);
+  state.totals.escapes += esc;
+
+  state.reputation = clamp(state.reputation - 12, 0, 100);
+  state.danger = 25;
+  state.satisfaction = Math.max(state.satisfaction, 40);
+  state.totals.riots++;
+
+  addLog(`🔥 RIOT! Lost ${fmt(loss)}, ${esc} inmates fled. Reputation −12.`, 'bad');
+  if(navigator.vibrate) navigator.vibrate([90, 60, 90, 60, 160]);
+}
+
+/* =========================================================
+   VIEW RENDERING
+   ========================================================= */
+const viewEl = $('view');
+const tabsEl = $('tabs');
+let viewTick = 0;
+
+const VIEWS = {};
+
+/* ---------- PRISON ---------- */
+VIEWS.prison = function(){
+  const d = derived();
+  const sat = state.satisfaction;
+  const dgr = state.danger;
+
+  const needRows = d.needs.map(n => `
+    <div class="need">
+      <span class="ni">${n.icon}</span>
+      <div class="nb">
+        <div class="nt"><span>${n.label}</span><span>${Math.round(n.score)}%</span></div>
+        <div class="track"><div class="fill" style="width:${n.score.toFixed(1)}%;background:${barColor(n.score)}"></div></div>
+      </div>
+    </div>`).join('');
+
+  const dgrState = dgr >= 70 ? 'bad' : dgr >= 40 ? 'warn' : 'good';
+  const status =
+    dgr >= 70 ? '🔴 CRITICAL — Riot imminent!' :
+    dgr >= 40 ? '🟠 Tense — improve conditions' :
+    sat  >= 80 ? '🟢 Orderly & well managed' :
+                 '🟡 Stable but unhappy';
+
+  const free = Math.max(0, d.capacity - state.population);
+
+  return `
+  <div class="card">
+    <h3>Warden's Overview</h3>
+    <div class="er"><span>👥 Population</span><b class="good">${state.population} / ${d.capacity}</b></div>
+    <div class="er"><span>🛏️ Free cells</span><b>${free}</b></div>
+    <div class="er"><span>😊 Inmate satisfaction</span><b class="${sat>=60?'good':sat>=35?'warn':'bad'}">${Math.round(sat)}%</b></div>
+    <div class="er"><span>⚠️ Danger level</span><b class="${dgrState}">${Math.round(dgr)}%</b></div>
+    <div class="er"><span>★ Reputation</span><b>${state.reputation.toFixed(1)}</b></div>
+    <div class="er total"><span>Status</span><b>${status}</b></div>
+  </div>
+
+  <div class="card">
+    <h3>Inmate Needs</h3>
+    ${needRows}
+  </div>
+
+  <div class="card">
+    <h3>Daily Economy</h3>
+    <div class="er"><span>🏛️ Government grants</span><b class="good">+${fmt(d.grantIncome)}</b></div>
+    <div class="er"><span>🔧 Prison labour (${d.activeJobs}/${d.jobSlots} jobs)</span><b class="good">+${fmt(d.jobIncome)}</b></div>
+    <div class="er"><span>🍽️ Food</span><b class="bad">−${fmt(d.foodCost)}</b></div>
+    <div class="er"><span>💡 Utilities</span><b class="bad">−${fmt(d.utility)}</b></div>
+    <div class="er"><span>👮 Staff wages</span><b class="bad">−${fmt(d.wages)}</b></div>
+    <div class="er total"><span>Net profit</span>
+      <b class="${d.net>=0?'good':'bad'}">${d.net>=0?'+':'−'}${fmt(Math.abs(d.net))}/day</b></div>
+  </div>
+
+  <div class="card">
+    <h3>Event Log</h3>
+    <div class="log">
+      ${state.log.length ? state.log.map(l =>
+        `<div class="${l.c}"><b>D${l.d}</b> · ${l.m}</div>`).join('')
+        : '<div>No events yet. Build your prison empire.</div>'}
+    </div>
+  </div>`;
+};
+
+/* ---------- BUILD ---------- */
+VIEWS.build = function(){
+  const rows = BUILDINGS.map(b => {
+    const cost = buildingCost(b);
+    const can  = state.money >= cost;
+    const cnt  = bCount(b.id);
+    return `
+    <div class="row">
+      <span class="ic">${b.icon}</span>
+      <div class="mid">
+        <div class="nm">${b.name} <span style="color:var(--dim);font-weight:600">×${cnt}</span></div>
+        <div class="ds">${b.desc}</div>
+      </div>
+      <button class="btn ${can?'':'off'}" data-action="build:${b.id}">
+        ${can ? fmt(cost) : fmt(cost)}
+      </button>
+    </div>`;
+  }).join('');
+
+  const d = derived();
+  return `
+  <div class="card">
+    <h3>Prison Facilities</h3>
+    <div class="er"><span>💰 Available funds</span><b class="good">${fmt(state.money)}</b></div>
+    <div class="er"><span>🏗️ Total structures</span><b>${totalBuildings()}</b></div>
+    <div class="er"><span>👥 Capacity</span><b>${state.population} / ${d.capacity}</b></div>
+  </div>
+  ${rows}`;
+};
+
+/* ---------- STAFF ---------- */
+VIEWS.staff = function(){
+  const rows = STAFF.map(s => {
+    const cnt  = sCount(s.id);
+    const fee  = s.wage * 2;
+    const can  = state.money >= fee;
+    return `
+    <div class="row">
+      <span class="ic">${s.icon}</span>
+      <div class="mid">
+        <div class="nm">${s.name} <span style="color:var(--dim);font-weight:600">×${cnt}</span></div>
+        <div class="ds">${s.desc} · ${fmt(s.wage)}/day</div>
+      </div>
+      <button class="btn ${can?'':'off'}" data-action="hire:${s.id}" style="min-width:62px">+${fmt(fee)}</button>
+      ${cnt > 0 ? `<button class="btn bad" data-action="fire:${s.id}" style="min-width:40px;padding:8px 6px">−</button>` : ''}
+    </div>`;
+  }).join('');
+
+  const d = derived();
+  const totalWage = STAFF.reduce((a,s)=> a + sCount(s.id)*s.wage, 0);
+  return `
+  <div class="card">
+    <h3>Staff Management</h3>
+    <div class="er"><span>👮 Total employees</span><b>${STAFF.reduce((a,s)=>a+sCount(s.id),0)}</b></div>
+    <div class="er"><span>💸 Daily wage bill</span><b class="bad">−${fmt(totalWage)}</b></div>
+    <div class="er"><span>📈 Net daily profit</span><b class="${d.net>=0?'good':'bad'}">${d.net>=0?'+':'−'}${fmt(Math.abs(d.net))}</b></div>
+    <div class="er"><span style="font-size:10px">Hiring fee = 2 days' wages</span><b></b></div>
+  </div>
+  ${rows}`;
+};
+
+/* ---------- UPGRADES ---------- */
+VIEWS.upgrade = function(){
+  const rows = UPGRADES.map(u => {
+    const owned = hasUp(u.id);
+    const can   = !owned && state.money >= u.cost;
+    return `
+    <div class="row">
+      <span class="ic">${u.icon}</span>
+      <div class="mid">
+        <div class="nm">${u.name}</div>
+        <div class="ds">${u.desc}</div>
+      </div>
+      ${owned
+        ? `<button class="btn done" style="min-width:78px">✓ OWNED</button>`
+        : `<button class="btn ${can?'':'off'}" data-action="upgrade:${u.id}">${fmt(u.cost)}</button>`}
+    </div>`;
+  }).join('');
+
+  const owned = Object.keys(state.upgrades).length;
+  return `
+  <div class="card">
+    <h3>Prison Upgrades</h3>
+    <div class="er"><span>⭐ Purchased</span><b>${owned} / ${UPGRADES.length}</b></div>
+    <div class="er"><span>💰 Available funds</span><b class="good">${fmt(state.money)}</b></div>
+  </div>
+  ${rows}`;
+};
+
+/* ---------- STATS ---------- */
+VIEWS.stats = function(){
+  const t = state.totals;
+  const d = derived();
+  const netWorth = state.money + totalBuildings() * 500;
+
+  return `
+  <div class="card">
+    <h3>Career Statistics</h3>
+    <div class="er"><span>📅 Days served as Warden</span><b>${state.day}</b></div>
+    <div class="er"><span>💵 Total earned</span><b class="good">${fmt(t.earned)}</b></div>
+    <div class="er"><span>💸 Total spent</span><b class="bad">${fmt(t.spent)}</b></div>
+    <div class="er"><span>🏗️ Structures built</span><b>${t.built}</b></div>
+    <div class="er"><span>🚚 Total intake</span><b>${t.intake}</b></div>
+    <div class="er"><span>🔓 Total released</span><b>${t.released}</b></div>
+    <div class="er"><span>🏃 Total escapes</span><b class="bad">${t.escapes}</b></div>
+    <div class="er"><span>🔥 Riots survived</span><b class="bad">${t.riots}</b></div>
+    <div class="er total"><span>🏦 Estimated net worth</span><b class="good">${fmt(netWorth)}</b></div>
+  </div>
+
+  <div class="card">
+    <h3>Current Rates</h3>
+    <div class="er"><span>Grant per inmate</span><b>${fmt(d.grantPer)}/day</b></div>
+    <div class="er"><span>Jobs filled</span><b>${d.activeJobs} / ${d.jobSlots}</b></div>
+    <div class="er"><span>Net per day</span><b class="${d.net>=0?'good':'bad'}">${d.net>=0?'+':'−'}${fmt(Math.abs(d.net))}</b></div>
+    <div class="er"><span>Net per hour</span><b class="${d.net>=0?'good':'bad'}">${d.net>=0?'+':'−'}${fmt(Math.abs(d.net/24))}</b></div>
+  </div>
+
+  <div class="card">
+    <h3>Danger Zone</h3>
+    <button class="btn ghost" data-action="saveNow" style="width:100%;margin-bottom:8px">💾 Save Game</button>
+    <button class="btn bad" data-action="reset" style="width:100%">🗑️ Reset All Progress</button>
+  </div>`;
+};
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function buildTabs(){
+  tabsEl.innerHTML = TABS.map(t =>
+    `<button data-action="tab:${t.id}" data-tab="${t.id}">
+       <span class="ti">${t.icon}</span>${t.label}
+     </button>`).join('');
+}
+function renderTabs(){
+  Array.from(tabsEl.children).forEach(b =>
+    b.classList.toggle('on', b.dataset.tab === state.tab));
+}
+
+function renderView(){
+  const sc = viewEl.scrollTop;
+  const fn = VIEWS[state.tab] || VIEWS.prison;
+  viewEl.innerHTML = fn();
+  viewEl.scrollTop = sc;
+  viewTick = 0;
+}
+
+function updateHUD(){
+  const d = derived();
+
+  const mEl = $('hud-money');
+  mEl.textContent = fmt(state.money);
+  mEl.style.color = state.money < 0 ? 'var(--bad)' : 'var(--amber)';
+
+  $('hud-rate').textContent =
+    (d.net >= 0 ? '+' : '−') + fmt(Math.abs(d.net)).slice(1) + '/day';
+
+  $('hud-day').textContent = 'Day ' + state.day;
+  $('hud-clock').textContent =
+    String(state.hour).padStart(2,'0') + ':00';
+  $('hud-pop').textContent = state.population + '/' + d.capacity;
+  $('hud-rep').textContent = '★ ' + state.reputation.toFixed(1);
+
+  const sat = clamp(state.satisfaction, 0, 100);
+  const dgr = clamp(state.danger, 0, 100);
+
+  $('bar-sat').style.width = sat + '%';
+  $('bar-dgr').style.width = dgr + '%';
+  $('txt-sat').textContent = 'Order ' + Math.round(sat) + '%';
+  $('txt-dgr').textContent = 'Danger ' + Math.round(dgr) + '%';
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const parts = btn.dataset.action.split(':');
+  const act = parts[0], id = parts[1];
+
+  switch(act){
+    case 'tab':
+      state.tab = id;
+      renderTabs();
+      renderView();
+      return;
+    case 'build':   buyBuilding(id); break;
+    case 'hire':    hireStaff(id);   break;
+    case 'fire':    fireStaff(id);   break;
+    case 'upgrade': buyUpgrade(id);  break;
+    case 'saveNow':
+      save();
+      addLog('💾 Game saved.', 'dim');
+      break;
+    case 'reset':
+      if(confirm('Reset ALL progress? This cannot be undone.')){
+        try{ localStorage.removeItem(SAVE_KEY); }catch(err){}
+        state = defaultState();
+        buildTabs(); renderTabs(); renderView(); updateHUD();
+      }
+      return;
+  }
+  renderView();
+  updateHUD();
+});
+
+/* =========================================================
+   SAVE / LOAD
+   ========================================================= */
+function save(){
+  state.lastSave = Date.now();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    const base = defaultState();
+    state = Object.assign(base, s);
+    state.buildings = Object.assign({}, s.buildings || {});
+    state.staff     = Object.assign({}, s.staff || {});
+    state.upgrades  = Object.assign({}, s.upgrades || {});
+    state.totals    = Object.assign({}, base.totals, s.totals || {});
+    state.log       = Array.isArray(s.log) ? s.log : [];
+    if(!VIEWS[state.tab]) state.tab = 'prison';
+    return true;
+  }catch(e){ return false; }
+}
+
+function applyOffline(){
+  const elapsed = (Date.now() - (state.lastSave || Date.now())) / 1000;
+  if(elapsed < 60) return;
+  const hours = Math.min(240, elapsed / 2);   // max 10 in-game days
+  const d = derived();
+  const gain = (d.net / 24) * hours;
+  if(gain > 0){
+    state.money += gain;
+    state.totals.earned += gain;
+    addLog(`💤 While you were away (${Math.floor(elapsed/3600)}h real), the prison earned ${fmt(gain)}.`, 'good');
+  }
+}
+
+/* =========================================================
+   MAIN LOOP
+   ========================================================= */
+let lastReal = Date.now();
+
+function gameStep(){
+  const now = Date.now();
+  let n = Math.floor((now - lastReal) / TICK_MS);
+  if(n <= 0) return;
+  lastReal += n * TICK_MS;
+  n = Math.min(n, 12);                       // catch-up cap
+  for(let i = 0; i < n; i++) tick();
+
+  updateHUD();
+  viewTick += n;
+  if(viewTick >= 3) renderView();
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function boot(){
+  const loaded = load();
+  if(loaded){
+    applyOffline();
+    addLog('🔓 Welcome back, Warden.', 'dim');
+  } else {
+    state = defaultState();
+    addLog('🏗️ Prison opened. 6 inmates transferred in.', 'good');
+    addLog('💡 Tip: keep every need above 60% to avoid riots.', 'dim');
+  }
+
+  buildTabs();
+  renderTabs();
+  renderView();
+  updateHUD();
+
+  lastReal = Date.now();
+  setInterval(gameStep, 250);
+  setInterval(save, 10000);
+
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) save();
+    else lastReal = Date.now();
+  });
+  window.addEventListener('pagehide', save);
+  window.addEventListener('beforeunload', save);
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
